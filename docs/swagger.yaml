@@ -1,0 +1,102 @@
+basePath: /api/v1/wallets
+definitions:
+  dto.ErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  dto.GetAmountResponse:
+    properties:
+      amount:
+        type: integer
+    type: object
+  dto.PostOperationRequest:
+    properties:
+      amount:
+        type: integer
+      operationType:
+        type: string
+      walletUUID:
+        description: так как используем UUID, поле решил тоже назвать UUID, а не ID
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a sample wallet api service
+  title: wallet api application
+  version: 0.0.1
+paths:
+  /:
+    post:
+      consumes:
+      - application/json
+      description: add operation using walletUUID, operationType and amount
+      parameters:
+      - description: request
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PostOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: PostOperation
+      tags:
+      - wallets
+  /{uuid}:
+    get:
+      consumes:
+      - application/json
+      description: get amount by wallets uuid
+      parameters:
+      - description: WALLET_UUID
+        in: path
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetAmountResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: GetAmount
+      tags:
+      - wallets
+swagger: "2.0"
