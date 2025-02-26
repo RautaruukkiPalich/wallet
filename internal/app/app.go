@@ -1,15 +1,21 @@
 package app
 
 import (
+	"context"
 	"github.com/gorilla/mux"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"wallet/config"
+	"wallet/internal/infrastructure/cache/redis"
+	"wallet/internal/infrastructure/database/postgres"
 	"wallet/internal/interface/http/v1/api"
 	"wallet/internal/presenter"
-	"wallet/internal/services"
+	transactionRepository "wallet/internal/repository/transaction"
+	walletRepository "wallet/internal/repository/wallet"
+	"wallet/internal/service"
 	"wallet/internal/utils/httpserver"
 	"wallet/internal/utils/metrics"
 	"wallet/internal/utils/pprof"
@@ -20,27 +26,34 @@ import (
 
 const (
 	pathToAPIWallets = "/api/v1/wallets"
+
+	shutdownTimeout = 5 * time.Second
 )
 
 func Run(cfg *config.Config) {
 
-	profilerServer := pprof.NewPProfServer(cfg.PProf.Convert())
+	ctx := context.Background()
+
+	store, err := postgres.NewStore(ctx, cfg.Database.Convert())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer store.Close()
+
+	cache, err := redis.New(ctx, cfg.Cache.Convert())
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
-		if err := profilerServer.Shutdown(); err != nil {
+		if err := cache.Close(); err != nil {
 			log.Println(err)
 		}
 	}()
-	go profilerServer.Run()
 
-	metricsServer := metrics.NewMetricsServer(cfg.Metrics.Convert())
-	defer func() {
-		if err := metricsServer.Shutdown(); err != nil {
-			log.Println(err)
-		}
-	}()
-	go metricsServer.Run()
+	walletRepo := walletRepository.New(cache)
+	transactionRepo := transactionRepository.New()
 
-	walletService := services.NewWalletService()
+	walletService := service.New(walletRepo, transactionRepo, walletRepo, store, 5)
 
 	walletPresenter := presenter.NewPresenter(walletService)
 
@@ -53,26 +66,42 @@ func Run(cfg *config.Config) {
 	walletRouter.PathPrefix("/swagger/").HandlerFunc(httpSwagger.WrapHandler)
 	api.RegisterRouter(walletRouter, walletPresenter)
 
+	profilerServer := pprof.NewPProfServer(cfg.PProf.Convert())
+	go profilerServer.Run()
+
+	metricsServer := metrics.NewMetricsServer(cfg.Metrics.Convert())
+	go metricsServer.Run()
+
 	server := httpserver.NewHTTPServer(cfg.HTTPServer.Convert(), router)
-	defer func() {
-		if err := server.Shutdown(); err != nil {
-			log.Println(err)
-		}
-	}()
 	go server.Run()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
 
 	select {
-	case res := <-stop:
-		log.Println("syscall stop", res.String())
+	case sig := <-stop:
+		log.Println("syscall stop", sig.String())
 	case err := <-server.Notify():
 		log.Println("http server notify: ", err)
 	case err := <-metricsServer.Notify():
 		log.Println("metrics notify: ", err)
 	case err := <-profilerServer.Notify():
 		log.Println("profiler notify: ", err)
+	}
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, shutdownTimeout)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("http server shutdown error: %v\n", err)
+	}
+
+	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("metrics server shutdown error: %v\n", err)
+	}
+
+	if err := profilerServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("pprof server shutdown error: %v\n", err)
 	}
 
 	log.Println("service exit")

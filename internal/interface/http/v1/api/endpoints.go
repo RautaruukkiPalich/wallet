@@ -77,3 +77,23 @@ func (rt *Router) getWalletAmount(w http.ResponseWriter, r *http.Request) {
 
 	response.Resp().WithCode(http.StatusOK).WithPayload(balance).Build().Write(w)
 }
+
+// @Summary		CreateWallet
+// @Description	create new wallet, returning uuid and amount
+// @Tags			wallets
+// @Accept			json
+// @Produce		json
+// @Success		200		{object}	dto.WalletResponse
+// @Failure		400,404	{object}	dto.ErrorResponse
+// @Success		500		{object}	dto.ErrorResponse
+// @Success		default	{object}	dto.ErrorResponse
+// @Router			/create [post]
+func (rt *Router) createWallet(w http.ResponseWriter, r *http.Request) {
+	wallet, err := rt.wallet.NewWallet(context.TODO())
+	if err != nil {
+		response.Resp().HandleError(err).Build().Write(w)
+		return
+	}
+
+	response.Resp().WithCode(http.StatusOK).WithPayload(wallet).Build().Write(w)
+}

@@ -57,8 +57,8 @@ func (s *Server) Run() {
 	close(s.notify)
 }
 
-func (s *Server) Shutdown() error {
-	return s.srv.Shutdown(context.TODO())
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.srv.Shutdown(ctx)
 }
 
 func (s *Server) Notify() chan error {

@@ -9,6 +9,8 @@ import (
 
 type walletService interface {
 	NewTransaction(ctx context.Context, operation *entity.Transaction) error
+
+	NewWallet(ctx context.Context) (*entity.Wallet, error)
 	GetBalance(context.Context, uuid.UUID) (int64, error)
 }
 
@@ -52,4 +54,12 @@ func (p *Presenter) GetBalance(ctx context.Context, uid string) (*dto.GetBalance
 	}
 
 	return &dto.GetBalanceResponse{Amount: balance}, nil
+}
+
+func (p *Presenter) NewWallet(ctx context.Context) (*dto.WalletResponse, error) {
+	wallet, err := p.walletService.NewWallet(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.WalletResponse{UUID: wallet.UUID.String(), Amount: wallet.Amount}, nil
 }

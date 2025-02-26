@@ -70,6 +70,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/create": {
+            "post": {
+                "description": "create new wallet, returning uuid and amount",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "CreateWallet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.WalletResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/{uuid}": {
             "get": {
                 "description": "get amount by wallets uuid",
@@ -86,7 +133,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "WALLET_UUID",
+                        "description": "wallet_uuid",
                         "name": "uuid",
                         "in": "path"
                     }
@@ -95,7 +142,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.GetAmountResponse"
+                            "$ref": "#/definitions/dto.GetBalanceResponse"
                         }
                     },
                     "400": {
@@ -135,7 +182,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.GetAmountResponse": {
+        "dto.GetBalanceResponse": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -154,6 +201,17 @@ const docTemplate = `{
                 },
                 "walletUUID": {
                     "description": "так как используем UUID, поле решил тоже назвать UUID, а не ID",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.WalletResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "uuid": {
                     "type": "string"
                 }
             }

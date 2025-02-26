@@ -2,6 +2,8 @@ package config
 
 import (
 	"time"
+	"wallet/internal/infrastructure/cache/redis"
+	"wallet/internal/infrastructure/database/postgres"
 	"wallet/internal/utils/httpserver"
 	"wallet/internal/utils/metrics"
 	"wallet/internal/utils/pprof"
@@ -13,6 +15,7 @@ type (
 		Database   DBConfig
 		PProf      PProfConfig
 		Metrics    MetricsConfig
+		Cache      CacheConfig
 	}
 
 	HTTPServerConfig struct {
@@ -23,10 +26,14 @@ type (
 
 	DBConfig struct {
 		Host     string `env:"DB_HOST" envDefault:"localhost"`
-		Port     string `env:"DB_PORT" envDefault:"5432"`
+		Port     string `env:"DB_PORT" envDefault:""`
 		Username string `env:"DB_USERNAME" envDefault:"postgres"`
 		Password string `env:"DB_PASSWORD" envDefault:"postgres"`
 		Database string `env:"DB_DATABASE" envDefault:"postgres"`
+	}
+
+	CacheConfig struct {
+		URI string `env:"CACHE_URI" envDefault:"localhost:6379"`
 	}
 
 	PProfConfig struct {
@@ -43,6 +50,22 @@ func (srv HTTPServerConfig) Convert() httpserver.ServerConfig {
 		Addr:         srv.Addr,
 		ReadTimeout:  srv.ReadTimeout,
 		WriteTimeout: srv.WriteTimeout,
+	}
+}
+
+func (db DBConfig) Convert() postgres.DBConfig {
+	return postgres.DBConfig{
+		Host:     db.Host,
+		Port:     db.Port,
+		User:     db.Username,
+		Pass:     db.Password,
+		Database: db.Database,
+	}
+}
+
+func (c CacheConfig) Convert() redis.Config {
+	return redis.Config{
+		URI: c.URI,
 	}
 }
 

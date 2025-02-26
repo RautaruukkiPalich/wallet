@@ -1,12 +1,13 @@
+
 # Напишите приложение, которое по REST принимает запрос вида
 ```POST api/v1/wallet```
-```
-{
-valletId: UUID,
-operationType: DEPOSIT or WITHDRAW,
-amount: 1000
-}
-```
+```  
+{  
+valletId: UUID,  
+operationType: DEPOSIT or WITHDRAW,  
+amount: 1000  
+}  
+```  
 
 #### после выполнять логику по изменению счета в базе данных
 #### также есть возможность получить баланс кошелька
@@ -21,3 +22,19 @@ amount: 1000
 #### Приложение должно запускаться в докер контейнере, база данных тоже, вся система должна подниматься с помощью docker-compose
 #### Необходимо покрыть приложение тестами
 #### Переменные окружения должны считываться из файла config.env
+
+Задачи:  
+1) ~~httpserver~~  
+2) ~~pprof~~
+3) ~~metrics~~
+4) ~~api~~
+5) ~~presenter~~
+6) ~~service~~ 
+7) ~~migrations~~
+8) ~~repository~~
+9) ~~database~~
+10) ~~cache~~  
+11) ~~docker-compose~~
+12) docker
+13) tests  
+14) logger

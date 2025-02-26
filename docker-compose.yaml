@@ -1,0 +1,62 @@
+name: wallet
+
+services:
+
+  # pgadmin
+  wallet-pgadmin:
+    container_name: "wallet-pgadmin"
+    image: dpage/pgadmin4
+    depends_on:
+      - wallet-database
+    environment:
+      PGADMIN_DEFAULT_EMAIL: '${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}'
+      PGADMIN_DEFAULT_PASSWORD: '${PGADMIN_DEFAULT_PASSWORD:-admin}'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    restart: on-failure
+    volumes:
+      - wallet-pgadmin:/var/lib/pgadmin
+    networks:
+      network1:
+
+  # database
+  wallet-database:
+    image: "postgres:16"
+    container_name: "wallet-database"
+    restart: on-failure
+    environment:
+      POSTGRES_DB: "${DB_NAME:-wallet}"
+      POSTGRES_USER: "${DB_USER:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASS:-postgres}"
+    ports:
+      - "${DB_PORT:-35432}:5432"
+    volumes:
+      - wallet-db:/data/wallet
+    networks:
+      network1:
+
+  # cache
+  wallet-redis:
+    image: redis:latest
+    container_name: "wallet-redis"
+    environment:
+      ALLOW_EMPTY_PASSWORD: "${REDIS_ALLOW_EMPTY_PASSWORD:-no}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-password}"
+      REDIS_USER: "${REDIS_USER:-default}"
+      REDIS_USER_PASSWORD: "${REDIS_USER_PASSWORD:-password}"
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - wallet-redis:/data/redis
+    restart: on-failure
+    networks:
+      network1:
+
+volumes:
+  wallet-db:
+  wallet-pgadmin:
+  wallet-redis:
+
+networks:
+  network1:
+    driver: bridge

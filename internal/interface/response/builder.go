@@ -51,8 +51,7 @@ func (b *Builder) WithError(err error) *Builder {
 
 // TODO: error handling
 func (b *Builder) HandleError(err error) *Builder {
-
-	return b
+	return b.WithCode(http.StatusBadRequest).WithError(err)
 }
 
 func (b *Builder) Build() *Response {

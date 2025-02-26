@@ -10,36 +10,46 @@ import (
 type Wallet struct {
 	UUID      uuid.UUID
 	Amount    int64
+	Version   int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-func NewWallet() Wallet {
-	return Wallet{
+func NewWallet() *Wallet {
+	return &Wallet{
 		Amount:    0,
+		Version:   0,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 }
 
-func (w *Wallet) DoTransaction(t *Transaction) error {
+func (w *Wallet) DoTransaction(t *Transaction) (*Wallet, error) {
 	if err := t.isValid(); err != nil {
-		return err
+		return nil, err
 	}
 	if w.UUID != t.WalletUUID {
-		return ErrInvalidOperationUUID
+		return nil, ErrInvalidOperationUUID
+	}
+
+	copyWallet := &Wallet{
+		UUID:      w.UUID,
+		Amount:    w.Amount,
+		Version:   w.Version,
+		CreatedAt: w.CreatedAt,
+		UpdatedAt: w.UpdatedAt,
 	}
 
 	switch t.Operation {
 	case Withdraw:
-		w.withdraw(t)
+		copyWallet.withdraw(t)
 	case Deposit:
-		w.deposit(t)
+		copyWallet.deposit(t)
 	default:
-		return ErrInvalidOperationType
+		return nil, ErrInvalidOperationType
 	}
 
-	return w.validate()
+	return copyWallet, copyWallet.validate()
 }
 
 func (w *Wallet) withdraw(t *Transaction) {
@@ -60,10 +70,13 @@ func (w *Wallet) validate() error {
 }
 
 type Transaction struct {
-	WalletUUID uuid.UUID
-	Operation  OperationType
-	Amount     int64
-	CreatedAt  time.Time
+	ID             int64
+	WalletUUID     uuid.UUID
+	IdempotencyKey uuid.UUID
+	Operation      OperationType
+	Amount         int64
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type OperationType string
@@ -77,16 +90,18 @@ func NewOperation(walletUUID uuid.UUID, operationType string, amount int64) (Tra
 	operationType = strings.ToLower(operationType)
 
 	o := Transaction{
-		WalletUUID: walletUUID,
-		Operation:  OperationType(operationType),
-		Amount:     amount,
-		CreatedAt:  time.Now(),
+		WalletUUID:     walletUUID,
+		IdempotencyKey: uuid.New(),
+		Operation:      OperationType(operationType),
+		Amount:         amount,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	return o, o.isValid()
 }
 
-func (t Transaction) isValid() error {
+func (t *Transaction) isValid() error {
 	if t.Amount <= 0 {
 		return ErrAmountIsOrBelowZero
 	}

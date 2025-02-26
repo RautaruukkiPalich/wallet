@@ -10,6 +10,7 @@ import (
 type walletPresenter interface {
 	Transaction(context.Context, *dto.PostOperationRequest) error
 	GetBalance(context.Context, string) (*dto.GetBalanceResponse, error)
+	NewWallet(ctx context.Context) (*dto.WalletResponse, error)
 }
 
 type Router struct {
@@ -19,6 +20,7 @@ type Router struct {
 
 const (
 	postOperationPath   = "/"
+	createWalletPath    = "/create"
 	getWalletAmountPath = "/{uuid}"
 )
 
@@ -32,6 +34,7 @@ func RegisterRouter(
 	}
 
 	rt.router.HandleFunc(postOperationPath, rt.postOperation).Methods(http.MethodPost)
+	rt.router.HandleFunc(createWalletPath, rt.createWallet).Methods(http.MethodPost)
 	rt.router.HandleFunc(getWalletAmountPath, rt.getWalletAmount).Methods(http.MethodGet)
 
 	return rt
