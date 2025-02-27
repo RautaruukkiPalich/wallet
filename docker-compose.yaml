@@ -2,6 +2,29 @@ name: wallet
 
 services:
 
+  # app
+  wallet-app:
+    container_name: 'wallet-app'
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./config.env
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+    networks:
+      network1:
+    depends_on:
+      - wallet-database
+      - wallet-kafka
+      - wallet-redis
+    command:
+      [ './app', ]
+
+
   # pgadmin
   wallet-pgadmin:
     container_name: "wallet-pgadmin"
@@ -12,7 +35,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: '${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}'
       PGADMIN_DEFAULT_PASSWORD: '${PGADMIN_DEFAULT_PASSWORD:-admin}'
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "5050:80"
     restart: on-failure
     volumes:
       - wallet-pgadmin:/var/lib/pgadmin
@@ -25,11 +48,11 @@ services:
     container_name: "wallet-database"
     restart: on-failure
     environment:
-      POSTGRES_DB: "${DB_NAME:-wallet}"
-      POSTGRES_USER: "${DB_USER:-postgres}"
-      POSTGRES_PASSWORD: "${DB_PASS:-postgres}"
+      POSTGRES_DB: "wallet"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
     ports:
-      - "${DB_PORT:-35432}:5432"
+      - "35432:5432"
     volumes:
       - wallet-db:/data/wallet
     networks:
@@ -45,7 +68,7 @@ services:
       REDIS_USER: "${REDIS_USER:-default}"
       REDIS_USER_PASSWORD: "${REDIS_USER_PASSWORD:-password}"
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
     volumes:
       - wallet-redis:/data/redis
     restart: on-failure
@@ -60,7 +83,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "${KAFKA_PORT:-22181}:2181"
+      - "2181:2181"
     restart: on-failure
     networks:
       network1:
@@ -77,7 +100,8 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
-      - "${KAFKA_PORT:-29092}:29092"
+      - "29092:29092"
+      - "9092:9092"
     restart: on-failure
     networks:
       network1:
@@ -86,7 +110,7 @@ services:
     container_name: wallet-kafka-ui
     image: provectuslabs/kafka-ui
     ports:
-      - "${KAFKA_PORT:-29090}:8080"
+      - "9090:8080"
     restart: on-failure
     depends_on:
       - wallet-kafka

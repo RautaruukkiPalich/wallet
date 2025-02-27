@@ -25,9 +25,9 @@ func NewPresenter(walletService walletService) *Presenter {
 }
 
 func (p *Presenter) Transaction(ctx context.Context, req *dto.PostOperationRequest) error {
-	walletUUID, err := uuid.Parse(req.WalletUUID)
+	walletUUID, err := uuid.Parse(req.WalletId)
 	if err != nil {
-		return err
+		return ErrInvalidUUID
 	}
 
 	operation, err := entity.NewOperation(walletUUID, req.OperationType, req.Amount)
@@ -44,8 +44,8 @@ func (p *Presenter) Transaction(ctx context.Context, req *dto.PostOperationReque
 
 func (p *Presenter) GetBalance(ctx context.Context, uid string) (*dto.GetBalanceResponse, error) {
 	walletUUID, err := uuid.Parse(uid)
-	if err != nil {
-		return nil, err
+	if err != nil || walletUUID == uuid.Nil {
+		return nil, ErrInvalidUUID
 	}
 
 	balance, err := p.walletService.GetBalance(ctx, walletUUID)

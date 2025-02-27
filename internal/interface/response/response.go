@@ -2,7 +2,7 @@ package response
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,7 +30,7 @@ func (b *Response) Write(w http.ResponseWriter) {
 	if b.Payload != nil {
 		payload, err = b.preparePayload()
 		if err != nil {
-			fmt.Println("json marshal failed: ", err.Error())
+			log.Println("json marshal failed: ", err.Error())
 		}
 	}
 
@@ -42,7 +42,7 @@ func (b *Response) Write(w http.ResponseWriter) {
 
 	_, err = w.Write(payload)
 	if err != nil {
-		fmt.Println("write response failed: ", err.Error())
+		log.Println("write response failed: ", err.Error())
 	}
 
 }

@@ -38,6 +38,10 @@ func NewStore(ctx context.Context, cfg DBConfig) (*Store, error) {
 	return &Store{pool: pool}, nil
 }
 
+func (s *Store) Close() {
+	s.pool.Close()
+}
+
 func (s *Store) WithTransact(ctx context.Context, fn func(pgx.Tx) error) error {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 
@@ -89,7 +93,3 @@ func (s *Store) WithTransact(ctx context.Context, fn func(pgx.Tx) error) error {
 //
 //	return nil
 //}
-
-func (s *Store) Close() {
-	s.pool.Close()
-}

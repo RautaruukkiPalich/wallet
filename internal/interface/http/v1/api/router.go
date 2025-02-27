@@ -7,6 +7,7 @@ import (
 	"wallet/internal/dto"
 )
 
+//go:generate mockery --name walletPresenter --structname=WalletPresenter
 type walletPresenter interface {
 	Transaction(context.Context, *dto.PostOperationRequest) error
 	GetBalance(context.Context, string) (*dto.GetBalanceResponse, error)
@@ -19,9 +20,9 @@ type Router struct {
 }
 
 const (
-	postOperationPath   = "/"
-	createWalletPath    = "/create"
-	getWalletAmountPath = "/{uuid}"
+	postOperationPath   = "/wallet"
+	createWalletPath    = "/wallet/create"
+	getWalletAmountPath = "/wallets/{uuid}"
 )
 
 func RegisterRouter(

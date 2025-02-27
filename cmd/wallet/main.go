@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	envFilename = "config.env"
+	envFilename = "config-local.env"
 )
 
 //	@title			wallet api application
@@ -19,12 +19,12 @@ const (
 //	@description	This is a sample wallet api service
 
 // @host		localhost:8080
-// @BasePath	/api/v1/wallets
+// @BasePath	/api/v1
 func main() {
 	cfg := new(config.Config)
 
 	if err := godotenv.Load(envFilename); err != nil {
-		log.Fatal("No .env file found")
+		log.Println("No .env file found")
 	}
 
 	if err := cleanenv.ReadEnv(cfg); err != nil {

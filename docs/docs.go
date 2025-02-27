@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/": {
+        "/wallet": {
             "post": {
                 "description": "add operation using walletUUID, operationType and amount",
                 "consumes": [
@@ -70,7 +70,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/create": {
+        "/wallet/create": {
             "post": {
                 "description": "create new wallet, returning uuid and amount",
                 "consumes": [
@@ -117,7 +117,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{uuid}": {
+        "/wallets/{uuid}": {
             "get": {
                 "description": "get amount by wallets uuid",
                 "consumes": [
@@ -223,7 +223,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "0.0.1",
 	Host:             "localhost:8080",
-	BasePath:         "/api/v1/wallets",
+	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "wallet api application",
 	Description:      "This is a sample wallet api service",

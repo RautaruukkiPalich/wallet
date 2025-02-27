@@ -12,6 +12,7 @@ import (
 	walletRepository "wallet/internal/repository/wallet"
 )
 
+//go:generate mockery --name walletRepo --structname=WalletRepo
 type walletRepo interface {
 	Insert(context.Context, pgx.Tx, *entity.Wallet) error
 	Update(context.Context, pgx.Tx, *entity.Wallet) error
@@ -19,21 +20,25 @@ type walletRepo interface {
 	GetByUUID(context.Context, pgx.Tx, uuid.UUID) (*entity.Wallet, error)
 }
 
+//go:generate mockery --name walletCache --structname=WalletCache
 type walletCache interface {
 	SetBalance(context.Context, uuid.UUID, int64) error
 	GetBalance(context.Context, uuid.UUID) (int64, error)
 }
 
+//go:generate mockery --name transactionRepo --structname=TransactionRepo
 type transactionRepo interface {
 	Insert(context.Context, pgx.Tx, *entity.Transaction) error
 	Exists(context.Context, pgx.Tx, *entity.Transaction) (bool, error)
 }
 
+//go:generate mockery --name transactionBroker --structname=TransactionBroker
 type transactionBroker interface {
 	Publish(context.Context, *entity.Transaction) error
 	Consume(context.Context) (*entity.Transaction, error)
 }
 
+//go:generate mockery --name store --structname=Store
 type store interface {
 	WithTransact(context.Context, func(pgx.Tx) error) error
 	//WithSerializableTransact(context.Context, func(pgx.Tx) error) error
@@ -135,7 +140,13 @@ func (s *Service) updateCache(ctx context.Context, uid uuid.UUID) error {
 		if err != nil {
 			return err
 		}
-		return s.walletCache.SetBalance(ctx, uid, wallet.Amount)
+
+		err = s.walletCache.SetBalance(ctx, uid, wallet.Amount)
+		if err != nil {
+			log.Println("error update cache: ", err)
+		}
+
+		return nil
 	})
 }
 
@@ -177,6 +188,8 @@ func (s *Service) NewTransaction(ctx context.Context, t *entity.Transaction) err
 		if errors.Is(err, walletRepository.ErrWalletNotFound) {
 			return err
 		}
+
+		log.Println("error while get wallet wallet:", err)
 		return err
 	}
 
@@ -233,7 +246,7 @@ func (s *Service) consumeTransactions(ctx context.Context) {
 			mu.Unlock()
 
 			if err != nil {
-				log.Println("failed to process transaction: ", t.IdempotencyKey, err)
+				log.Printf("failed to process transaction %v: %v\n", t.IdempotencyKey, err)
 
 				if errors.Is(err, transactionRepository.ErrDuplicateTransaction) ||
 					errors.Is(err, walletRepository.ErrWalletNotFound) {
@@ -248,7 +261,7 @@ func (s *Service) consumeTransactions(ctx context.Context) {
 
 func (s *Service) handleTransactionError(ctx context.Context, t *entity.Transaction, err error) {
 	if errors.Is(err, transactionRepository.ErrDuplicateTransaction) {
-		log.Println("Duplicate transaction, skipping")
+		log.Printf("Duplicate transaction: %v, skipping\n", t.IdempotencyKey)
 		return
 	}
 
@@ -259,7 +272,7 @@ func (s *Service) handleTransactionError(ctx context.Context, t *entity.Transact
 
 	t.StatusNew()
 	if err := s.transactionBroker.Publish(ctx, t); err != nil {
-		log.Printf("Failed to requeue transaction: %v", err)
+		log.Printf("Failed to requeue transaction %v: %v\n", t.IdempotencyKey, err)
 	}
 }
 

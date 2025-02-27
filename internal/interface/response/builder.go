@@ -1,8 +1,13 @@
 package response
 
 import (
+	"errors"
 	"net/http"
 	"wallet/internal/dto"
+	"wallet/internal/entity"
+	"wallet/internal/presenter"
+	walletRepository "wallet/internal/repository/wallet"
+	"wallet/internal/service"
 )
 
 type Builder struct {
@@ -49,9 +54,37 @@ func (b *Builder) WithError(err error) *Builder {
 	return b
 }
 
-// TODO: error handling
 func (b *Builder) HandleError(err error) *Builder {
-	return b.WithCode(http.StatusBadRequest).WithError(err)
+	if errors.Is(err, service.ErrInvalidUUID) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, presenter.ErrInvalidUUID) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, walletRepository.ErrWalletNotFound) {
+		return b.WithCode(http.StatusNotFound).WithError(err)
+	}
+
+	if errors.Is(err, entity.ErrWalletUUIDIsEmpty) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, entity.ErrNotEnoughFunds) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, entity.ErrInvalidOperationType) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, entity.ErrInvalidOperationUUID) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, entity.ErrInvalidStatus) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+	if errors.Is(err, entity.ErrAmountIsOrBelowZero) {
+		return b.WithCode(http.StatusBadRequest).WithError(err)
+	}
+
+	return b.WithCode(http.StatusInternalServerError)
 }
 
 func (b *Builder) Build() *Response {

@@ -18,7 +18,7 @@ import (
 // @Failure		400,404	{object}	dto.ErrorResponse
 // @Success		500		{object}	dto.ErrorResponse
 // @Success		default	{object}	dto.ErrorResponse
-// @Router			/ [post]
+// @Router			/wallet [post]
 func (rt *Router) postOperation(w http.ResponseWriter, r *http.Request) {
 	var req dto.PostOperationRequest
 
@@ -54,7 +54,7 @@ func (rt *Router) postOperation(w http.ResponseWriter, r *http.Request) {
 // @Failure		400,404	{object}	dto.ErrorResponse
 // @Success		500		{object}	dto.ErrorResponse
 // @Success		default	{object}	dto.ErrorResponse
-// @Router			/{uuid} [get]
+// @Router			/wallets/{uuid} [get]
 func (rt *Router) getWalletAmount(w http.ResponseWriter, r *http.Request) {
 	const uuid = "uuid"
 	walletUUID := mux.Vars(r)[uuid]
@@ -87,7 +87,7 @@ func (rt *Router) getWalletAmount(w http.ResponseWriter, r *http.Request) {
 // @Failure		400,404	{object}	dto.ErrorResponse
 // @Success		500		{object}	dto.ErrorResponse
 // @Success		default	{object}	dto.ErrorResponse
-// @Router			/create [post]
+// @Router			/wallet/create [post]
 func (rt *Router) createWallet(w http.ResponseWriter, r *http.Request) {
 	wallet, err := rt.wallet.NewWallet(context.TODO())
 	if err != nil {

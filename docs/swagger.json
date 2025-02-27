@@ -7,9 +7,9 @@
         "version": "0.0.1"
     },
     "host": "localhost:8080",
-    "basePath": "/api/v1/wallets",
+    "basePath": "/api/v1",
     "paths": {
-        "/": {
+        "/wallet": {
             "post": {
                 "description": "add operation using walletUUID, operationType and amount",
                 "consumes": [
@@ -64,7 +64,7 @@
                 }
             }
         },
-        "/create": {
+        "/wallet/create": {
             "post": {
                 "description": "create new wallet, returning uuid and amount",
                 "consumes": [
@@ -111,7 +111,7 @@
                 }
             }
         },
-        "/{uuid}": {
+        "/wallets/{uuid}": {
             "get": {
                 "description": "get amount by wallets uuid",
                 "consumes": [

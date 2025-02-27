@@ -10,7 +10,7 @@ type WalletResponse struct {
 }
 
 type PostOperationRequest struct {
-	WalletUUID    string `json:"walletUUID"` // так как используем UUID, поле решил тоже назвать UUID, а не ID
+	WalletId      string `json:"walletId"`
 	OperationType string `json:"operationType"`
 	Amount        int64  `json:"amount"`
 }

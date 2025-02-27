@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"fmt"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -15,7 +16,13 @@ type Consumer struct {
 	r *kafka.Reader
 }
 
-func NewConsumer(cfg ConsumerConfig) *Consumer {
+func NewConsumer(cfg ConsumerConfig) (*Consumer, error) {
+
+	conn, err := kafka.DialContext(context.Background(), "tcp", cfg.Addr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to Kafka: %w", err)
+	}
+	defer conn.Close()
 
 	r := kafka.NewReader(
 		kafka.ReaderConfig{
@@ -24,7 +31,7 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 			GroupID: cfg.GroupID,
 		})
 
-	return &Consumer{r: r}
+	return &Consumer{r: r}, nil
 }
 
 func (c *Consumer) Consume(ctx context.Context) ([]byte, error) {

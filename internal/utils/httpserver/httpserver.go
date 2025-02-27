@@ -2,7 +2,7 @@ package httpserver
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -36,7 +36,7 @@ func NewHTTPServer(cfg ServerConfig, router http.Handler) *Server {
 
 func (s *Server) Run() {
 	if s.isRunning.Swap(true) {
-		fmt.Println(ErrDuplicateRun)
+		log.Println(ErrDuplicateRun)
 		return
 	}
 

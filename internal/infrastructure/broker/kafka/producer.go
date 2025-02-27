@@ -11,8 +11,7 @@ type ProducerConfig struct {
 }
 
 type Producer struct {
-	pr    *kafka.Writer
-	topic string
+	pr *kafka.Writer
 }
 
 func NewProducer(cfg ProducerConfig) (*Producer, error) {

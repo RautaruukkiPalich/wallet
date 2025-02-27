@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"log"
 	"os"
 	"os/signal"
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	pathToAPIWallets = "/api/v1/wallets"
+	pathToAPI = "/api/v1"
 
 	shutdownTimeout = 5 * time.Second
 )
@@ -51,7 +52,10 @@ func Run(cfg *config.Config) {
 		}
 	}()
 
-	consumer := kafka.NewConsumer(cfg.Consumer.Convert())
+	consumer, err := kafka.NewConsumer(cfg.Consumer.Convert())
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := consumer.Close(); err != nil {
 			log.Println(err)
@@ -80,7 +84,7 @@ func Run(cfg *config.Config) {
 		metrics.MW,
 	)
 
-	walletRouter := router.PathPrefix(pathToAPIWallets).Subrouter()
+	walletRouter := router.PathPrefix(pathToAPI).Subrouter()
 	walletRouter.PathPrefix("/swagger/").HandlerFunc(httpSwagger.WrapHandler)
 	api.RegisterRouter(walletRouter, walletPresenter)
 
@@ -90,8 +94,22 @@ func Run(cfg *config.Config) {
 	metricsServer := metrics.NewMetricsServer(cfg.Metrics.Convert())
 	go metricsServer.Run()
 
-	server := httpserver.NewHTTPServer(cfg.HTTPServer.Convert(), router)
+	// Настройка CORS с необходимыми параметрами для работы со Swagger контейнеризированного приложения
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		ExposedHeaders:   []string{},
+		AllowCredentials: true,
+		MaxAge:           3600, // Кеширование CORS настроек
+	})
+
+	handler := c.Handler(router)
+
+	server := httpserver.NewHTTPServer(cfg.HTTPServer.Convert(), handler)
 	go server.Run()
+
+	log.Println("server started on", cfg.HTTPServer.Convert().Addr)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)

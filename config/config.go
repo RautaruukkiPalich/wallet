@@ -22,46 +22,46 @@ type (
 	}
 
 	HTTPServerConfig struct {
-		Addr         string        `env:"HTTP_SERVER_ADDR" envDefault:":8080"`
-		ReadTimeout  time.Duration `env:"HTTP_SERVER_READ_TIMEOUT" envDefault:"5s"`
-		WriteTimeout time.Duration `env:"HTTP_SERVER_WRITE_TIMEOUT" envDefault:"5s"`
+		//Port         string        `env:"HTTP_SERVER_PORT" env-default:"8080"`
+		ReadTimeout  time.Duration `env:"HTTP_SERVER_READ_TIMEOUT" env-default:"5s"`
+		WriteTimeout time.Duration `env:"HTTP_SERVER_WRITE_TIMEOUT" env-default:"5s"`
 	}
 
 	DBConfig struct {
-		Host     string `env:"DB_HOST" envDefault:"localhost"`
-		Port     string `env:"DB_PORT" envDefault:""`
-		Username string `env:"DB_USERNAME" envDefault:"postgres"`
-		Password string `env:"DB_PASSWORD" envDefault:"postgres"`
-		Database string `env:"DB_DATABASE" envDefault:"postgres"`
+		Host     string `env:"DB_HOST" env-default:"localhost"`
+		Port     string `env:"DB_PORT" env-default:""`
+		Username string `env:"DB_USERNAME" env-default:"postgres"`
+		Password string `env:"DB_PASSWORD" env-default:"postgres"`
+		Database string `env:"DB_DATABASE" env-default:"postgres"`
 	}
 
 	CacheConfig struct {
-		URI string `env:"CACHE_URI" envDefault:"localhost:6379"`
+		URI string `env:"CACHE_URI" env-default:"localhost:6379"`
 	}
 
 	ConsumerConfig struct {
-		Addr    string `env:"CONSUMER_ADDR" envDefault:"localhost:29092"`
-		Topic   string `env:"CONSUMER_TOPIC" envDefault:"test"`
-		GroupID string `env:"CONSUMER_GROUP_ID" envDefault:"test"`
+		Addr    string `env:"CONSUMER_ADDR" env-default:"localhost:29092"`
+		Topic   string `env:"CONSUMER_TOPIC" env-default:"test"`
+		GroupID string `env:"CONSUMER_GROUP_ID" env-default:"test"`
 	}
 
 	ProducerConfig struct {
-		Addr  string `env:"PRODUCER_ADDR" envDefault:"localhost:29092"`
-		Topic string `env:"PRODUCER_TOPIC" envDefault:"test"`
+		Addr  string `env:"PRODUCER_ADDR" env-default:"localhost:29092"`
+		Topic string `env:"PRODUCER_TOPIC" env-default:"test"`
 	}
 
 	PProfConfig struct {
-		Addr string `env:"PPROF_ADDR" envDefault:":8081"`
+		//Port string `env:"PPROF_PORT" env-default:"8081"`
 	}
 
 	MetricsConfig struct {
-		Addr string `env:"METRICS_ADDR" envDefault:":8082"`
+		//Port string `env:"METRICS_PORT" env-default:"8082"`
 	}
 )
 
 func (srv HTTPServerConfig) Convert() httpserver.ServerConfig {
 	return httpserver.ServerConfig{
-		Addr:         srv.Addr,
+		Addr:         ":8080",
 		ReadTimeout:  srv.ReadTimeout,
 		WriteTimeout: srv.WriteTimeout,
 	}
@@ -85,13 +85,13 @@ func (c CacheConfig) Convert() redis.Config {
 
 func (p PProfConfig) Convert() pprof.Config {
 	return pprof.Config{
-		Addr: p.Addr,
+		Addr: ":8081",
 	}
 }
 
 func (ms MetricsConfig) Convert() metrics.Config {
 	return metrics.Config{
-		Addr: ms.Addr,
+		Addr: ":8082",
 	}
 }
 
