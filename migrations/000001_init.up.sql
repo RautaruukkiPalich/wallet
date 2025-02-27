@@ -27,9 +27,10 @@ CREATE TABLE IF NOT EXISTS transactions
 (
     id              BIGSERIAL                NOT NULL,
     wallet_uuid     uuid                     NOT NULL,
-    idempotency_key uuid                     NOT NULL,
+    idempotency_key uuid UNIQUE              NOT NULL,
     operation       VARCHAR(50)              NOT NULL,
     amount          BIGINT                   NOT NULL,
+    status          VARCHAR(50)              NOT NULL,
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL
 )

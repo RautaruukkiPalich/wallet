@@ -34,7 +34,8 @@ amount: 1000
 8) ~~repository~~
 9) ~~database~~
 10) ~~cache~~  
-11) ~~docker-compose~~
-12) docker
-13) tests  
-14) logger
+11) ~~broker~~
+12) ~~docker-compose~~
+13) docker
+14) tests  
+15) logger

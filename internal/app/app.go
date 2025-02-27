@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 	"wallet/config"
+	"wallet/internal/infrastructure/broker/kafka"
 	"wallet/internal/infrastructure/cache/redis"
 	"wallet/internal/infrastructure/database/postgres"
 	"wallet/internal/interface/http/v1/api"
@@ -50,10 +51,27 @@ func Run(cfg *config.Config) {
 		}
 	}()
 
-	walletRepo := walletRepository.New(cache)
-	transactionRepo := transactionRepository.New()
+	consumer := kafka.NewConsumer(cfg.Consumer.Convert())
+	defer func() {
+		if err := consumer.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
 
-	walletService := service.New(walletRepo, transactionRepo, walletRepo, store, 5)
+	producer, err := kafka.NewProducer(cfg.Producer.Convert())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := producer.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+
+	walletRepo := walletRepository.New(cache)
+	transactionRepo := transactionRepository.New(consumer, producer)
+
+	walletService := service.New(ctx, walletRepo, transactionRepo, transactionRepo, walletRepo, store, 20)
 
 	walletPresenter := presenter.NewPresenter(walletService)
 

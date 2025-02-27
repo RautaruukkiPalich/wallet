@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"log"
 	"sync"
 	"wallet/internal/entity"
+	transactionRepository "wallet/internal/repository/transaction"
 	walletRepository "wallet/internal/repository/wallet"
 )
 
@@ -25,37 +26,55 @@ type walletCache interface {
 
 type transactionRepo interface {
 	Insert(context.Context, pgx.Tx, *entity.Transaction) error
+	Exists(context.Context, pgx.Tx, *entity.Transaction) (bool, error)
+}
+
+type transactionBroker interface {
+	Publish(context.Context, *entity.Transaction) error
+	Consume(context.Context) (*entity.Transaction, error)
 }
 
 type store interface {
 	WithTransact(context.Context, func(pgx.Tx) error) error
-	WithSerializableTransact(context.Context, func(pgx.Tx) error) error
+	//WithSerializableTransact(context.Context, func(pgx.Tx) error) error
 }
 
 type Service struct {
-	walletRepo      walletRepo
-	transactionRepo transactionRepo
-	walletCache     walletCache
-	store           store
-	retry           int8
-	mu              *sync.RWMutex
+	walletRepo        walletRepo
+	transactionRepo   transactionRepo
+	transactionBroker transactionBroker
+	walletCache       walletCache
+	store             store
+	workersCount      int8
+	mu                *sync.RWMutex
+	walletMutex       sync.Map
 }
 
 func New(
+	ctx context.Context,
 	walletRepo walletRepo,
 	transactionRepo transactionRepo,
+	transactionBroker transactionBroker,
 	walletCache walletCache,
 	store store,
-	retry int8,
+	workersCount int8,
+
 ) *Service {
-	return &Service{
-		walletRepo:      walletRepo,
-		transactionRepo: transactionRepo,
-		walletCache:     walletCache,
-		store:           store,
-		retry:           retry,
-		mu:              &sync.RWMutex{},
+	s := &Service{
+		walletRepo:        walletRepo,
+		transactionRepo:   transactionRepo,
+		transactionBroker: transactionBroker,
+		walletCache:       walletCache,
+		store:             store,
+		workersCount:      workersCount,
+		mu:                &sync.RWMutex{},
 	}
+
+	for range s.workersCount {
+		go s.consumeTransactions(ctx)
+	}
+
+	return s
 }
 
 /*
@@ -95,18 +114,8 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (int64, error) 
 		return balance, nil
 	}
 
-	wallet := new(entity.Wallet)
-
 	err = s.withLock(func() error {
-		return s.store.WithTransact(ctx, func(tx pgx.Tx) error {
-
-			wallet, err = s.walletRepo.GetByUUID(ctx, tx, uid)
-			if err != nil {
-				return err
-			}
-			return s.walletCache.SetBalance(ctx, uid, wallet.Amount)
-
-		})
+		return s.updateCache(ctx, uid)
 	})
 	if err != nil {
 		return 0, err
@@ -118,6 +127,16 @@ func (s *Service) GetBalance(ctx context.Context, uid uuid.UUID) (int64, error) 
 	}
 
 	return balance, nil
+}
+
+func (s *Service) updateCache(ctx context.Context, uid uuid.UUID) error {
+	return s.store.WithTransact(ctx, func(tx pgx.Tx) error {
+		wallet, err := s.walletRepo.GetByUUID(ctx, tx, uid)
+		if err != nil {
+			return err
+		}
+		return s.walletCache.SetBalance(ctx, uid, wallet.Amount)
+	})
 }
 
 func (s *Service) withLock(fn func() error) error {
@@ -133,52 +152,128 @@ func (s *Service) withRLock(fn func() error) error {
 }
 
 /*
-NEW TRANSACTION
+TRANSACTION WITH BROKER
 */
 
 func (s *Service) NewTransaction(ctx context.Context, t *entity.Transaction) error {
-	var balance int64
-
-	for range s.retry {
-		err := s.store.WithSerializableTransact(ctx, func(tx pgx.Tx) error {
-			wallet, err := s.walletRepo.GetByUUID(ctx, tx, t.WalletUUID)
-			if err != nil {
-				return err
-			}
-			newWallet, err := wallet.DoTransaction(t)
-			if err != nil {
-				return err
-			}
-			err = s.walletRepo.Update(ctx, tx, newWallet)
-			if err != nil {
-				return err
-			}
-			err = s.transactionRepo.Insert(ctx, tx, t)
-			if err != nil {
-				return err
-			}
-			balance = newWallet.Amount
-			return nil
-		})
+	err := s.store.WithTransact(ctx, func(tx pgx.Tx) error {
+		wallet, err := s.walletRepo.GetByUUID(ctx, tx, t.WalletUUID)
 		if err != nil {
-			if errors.Is(err, entity.ErrWalletUUIDIsEmpty) {
-				return err
-			}
-			if errors.Is(err, entity.ErrNotEnoughFunds) {
-				return err
-			}
-			if errors.Is(err, walletRepository.ErrWalletNotFound) {
-				return err
-			}
-			continue
+			return err
 		}
-
-		if err := s.walletCache.SetBalance(ctx, t.WalletUUID, balance); err != nil {
-			fmt.Println("error set cache: ", err)
+		_, err = wallet.DoTransaction(t)
+		if err != nil {
+			return err
 		}
-
 		return nil
+	})
+	if err != nil {
+		if errors.Is(err, entity.ErrWalletUUIDIsEmpty) {
+			return err
+		}
+		if errors.Is(err, entity.ErrNotEnoughFunds) {
+			return err
+		}
+		if errors.Is(err, walletRepository.ErrWalletNotFound) {
+			return err
+		}
+		return err
 	}
 
-	return ErrTooManyRetries
+	return s.transactionBroker.Publish(ctx, t)
+}
+
+func (s *Service) consumeTransactions(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			t, err := s.transactionBroker.Consume(ctx)
+			if err != nil {
+				log.Println("error consuming transaction: ", err)
+				continue
+			}
+
+			mu := s.getWalletMutex(t.WalletUUID)
+
+			mu.Lock()
+
+			err = s.store.WithTransact(ctx, func(tx pgx.Tx) error {
+				if exists, err := s.transactionRepo.Exists(ctx, tx, t); err != nil || exists {
+					return nil
+				}
+				wallet, err := s.walletRepo.GetByUUID(ctx, tx, t.WalletUUID)
+				if err != nil {
+					return err
+				}
+				newWallet, err := wallet.DoTransaction(t)
+				if err != nil {
+					return err
+				}
+				err = s.walletRepo.Update(ctx, tx, newWallet)
+				if err != nil {
+					return err
+				}
+
+				t.StatusSuccess()
+				err = s.transactionRepo.Insert(ctx, tx, t)
+				if err != nil {
+					return err
+				}
+
+				err = s.walletCache.SetBalance(ctx, t.WalletUUID, newWallet.Amount)
+				if err != nil {
+					log.Println("error set cache: ", err)
+				}
+
+				return nil
+			})
+
+			mu.Unlock()
+
+			if err != nil {
+				log.Println("failed to process transaction: ", t.IdempotencyKey, err)
+
+				if errors.Is(err, transactionRepository.ErrDuplicateTransaction) ||
+					errors.Is(err, walletRepository.ErrWalletNotFound) {
+					continue
+				}
+
+				s.handleTransactionError(ctx, t, err)
+			}
+		}
+	}
+}
+
+func (s *Service) handleTransactionError(ctx context.Context, t *entity.Transaction, err error) {
+	if errors.Is(err, transactionRepository.ErrDuplicateTransaction) {
+		log.Println("Duplicate transaction, skipping")
+		return
+	}
+
+	if errors.Is(err, entity.ErrNotEnoughFunds) {
+		s.markTransactionAsFailed(ctx, t)
+		return
+	}
+
+	t.StatusNew()
+	if err := s.transactionBroker.Publish(ctx, t); err != nil {
+		log.Printf("Failed to requeue transaction: %v", err)
+	}
+}
+
+func (s *Service) markTransactionAsFailed(ctx context.Context, t *entity.Transaction) {
+	err := s.store.WithTransact(ctx, func(tx pgx.Tx) error {
+		t.StatusFailure()
+		return s.transactionRepo.Insert(ctx, tx, t)
+	})
+	if err != nil {
+		log.Printf("Failed to mark transaction as failed: %v", err)
+	}
+}
+
+func (s *Service) getWalletMutex(uid uuid.UUID) *sync.Mutex {
+	mu, _ := s.walletMutex.LoadOrStore(uid.String(), &sync.Mutex{})
+	return mu.(*sync.Mutex)
 }

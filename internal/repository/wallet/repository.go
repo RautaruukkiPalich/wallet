@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 	"wallet/internal/entity"
+	"wallet/internal/utils/metrics"
 )
 
 type cache interface {
@@ -25,6 +26,12 @@ func New(cache cache) *Repository {
 		cache: cache,
 	}
 }
+
+const (
+	insertWalletFn    = "insert wallet"
+	updateWalletFn    = "update wallet"
+	getWalletByUUIDFn = "get wallet by uuid"
+)
 
 func (r Repository) Insert(ctx context.Context, tx pgx.Tx, w *entity.Wallet) error {
 	stmt, args, err := sq.
@@ -48,7 +55,7 @@ func (r Repository) Insert(ctx context.Context, tx pgx.Tx, w *entity.Wallet) err
 		return err
 	}
 
-	if err := tx.QueryRow(ctx, stmt, args...).Scan(&w.UUID); err != nil {
+	if err := metrics.Tx().QueryRow(insertWalletFn, ctx, tx, stmt, args...).Scan(&w.UUID); err != nil {
 		return err
 	}
 
@@ -70,7 +77,7 @@ func (r Repository) Update(ctx context.Context, tx pgx.Tx, w *entity.Wallet) err
 		return err
 	}
 
-	res, err := tx.Exec(ctx, stmt, args...)
+	res, err := metrics.Tx().Exec(updateWalletFn, ctx, tx, stmt, args...)
 	if err != nil {
 		return err
 	}
@@ -100,8 +107,7 @@ func (r Repository) GetByUUID(ctx context.Context, tx pgx.Tx, uid uuid.UUID) (*e
 
 	w := new(entity.Wallet)
 
-	if err := tx.
-		QueryRow(ctx, stmt, args...).
+	if err := metrics.Tx().QueryRow(getWalletByUUIDFn, ctx, tx, stmt, args...).
 		Scan(
 			&w.UUID,
 			&w.Amount,

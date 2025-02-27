@@ -2,6 +2,7 @@ package config
 
 import (
 	"time"
+	"wallet/internal/infrastructure/broker/kafka"
 	"wallet/internal/infrastructure/cache/redis"
 	"wallet/internal/infrastructure/database/postgres"
 	"wallet/internal/utils/httpserver"
@@ -16,6 +17,8 @@ type (
 		PProf      PProfConfig
 		Metrics    MetricsConfig
 		Cache      CacheConfig
+		Consumer   ConsumerConfig
+		Producer   ProducerConfig
 	}
 
 	HTTPServerConfig struct {
@@ -34,6 +37,17 @@ type (
 
 	CacheConfig struct {
 		URI string `env:"CACHE_URI" envDefault:"localhost:6379"`
+	}
+
+	ConsumerConfig struct {
+		Addr    string `env:"CONSUMER_ADDR" envDefault:"localhost:29092"`
+		Topic   string `env:"CONSUMER_TOPIC" envDefault:"test"`
+		GroupID string `env:"CONSUMER_GROUP_ID" envDefault:"test"`
+	}
+
+	ProducerConfig struct {
+		Addr  string `env:"PRODUCER_ADDR" envDefault:"localhost:29092"`
+		Topic string `env:"PRODUCER_TOPIC" envDefault:"test"`
 	}
 
 	PProfConfig struct {
@@ -78,5 +92,20 @@ func (p PProfConfig) Convert() pprof.Config {
 func (ms MetricsConfig) Convert() metrics.Config {
 	return metrics.Config{
 		Addr: ms.Addr,
+	}
+}
+
+func (c ConsumerConfig) Convert() kafka.ConsumerConfig {
+	return kafka.ConsumerConfig{
+		Addr:    c.Addr,
+		Topic:   c.Topic,
+		GroupID: c.GroupID,
+	}
+}
+
+func (p ProducerConfig) Convert() kafka.ProducerConfig {
+	return kafka.ProducerConfig{
+		Addr:  p.Addr,
+		Topic: p.Topic,
 	}
 }

@@ -31,8 +31,11 @@ migratedown:
 bomb-get-amount:
 	bombardier -c 50 -d 30s http://localhost:8080/api/v1/wallets/00000000-0000-0000-0000-000000000001
 
-bomb-set-transaction:
-	bombardier -c 1 -d 30s -m POST  http://localhost:8080/api/v1/wallets/ -H 'accept: application/json' -H 'Content-Type: application/json' -f './example.json'
+bomb-withdraw:
+	bombardier -c 2 -d 30s -m POST  http://localhost:8080/api/v1/wallets/ -H 'accept: application/json' -H 'Content-Type: application/json' -f './example-withdraw.json'
+
+bomb-deposit:
+	bombardier -c 2 -d 30s -m POST  http://localhost:8080/api/v1/wallets/ -H 'accept: application/json' -H 'Content-Type: application/json' -f './example-deposit.json'
 
 bomb-new-wallet:
 	bombardier -c 50 -d 30s -m POST  http://localhost:8080/api/v1/wallets/create -H 'accept: application/json'

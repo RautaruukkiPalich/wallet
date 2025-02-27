@@ -35,7 +35,7 @@ func (p *Presenter) Transaction(ctx context.Context, req *dto.PostOperationReque
 		return err
 	}
 
-	if err := p.walletService.NewTransaction(ctx, &operation); err != nil {
+	if err := p.walletService.NewTransaction(ctx, operation); err != nil {
 		return err
 	}
 
