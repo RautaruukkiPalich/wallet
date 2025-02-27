@@ -199,8 +199,7 @@ const docTemplate = `{
                 "operationType": {
                     "type": "string"
                 },
-                "walletUUID": {
-                    "description": "так как используем UUID, поле решил тоже назвать UUID, а не ID",
+                "walletId": {
                     "type": "string"
                 }
             }

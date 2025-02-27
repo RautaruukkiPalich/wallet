@@ -56,11 +56,14 @@ POST http://localhost:8080/api/v1/wallet/create
 ```
 POST http://localhost:8080/api/v1/wallet
 ```
-``` json 
-{  
-valletUUID: UUID,  
-operationType: DEPOSIT or WITHDRAW,  
-amount: 1000  
+
+Поправил орфографию тэга с "**v**alletId" на "**w**alletId"
+
+```json 
+{
+  "walletId": "UUID",
+  "operationType": "DEPOSIT"  or  "WITHDRAW",
+  "amount": 1000
 }  
 ``` 
 
