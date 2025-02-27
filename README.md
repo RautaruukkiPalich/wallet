@@ -62,7 +62,7 @@ POST http://localhost:8080/api/v1/wallet
 ```json 
 {
   "walletId": "UUID",
-  "operationType": "DEPOSIT"  or  "WITHDRAW",
+  "operationType": "DEPOSIT" or "WITHDRAW",
   "amount": 1000
 }  
 ``` 
